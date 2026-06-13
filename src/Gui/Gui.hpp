@@ -20,6 +20,7 @@
 #include "ImguiPlugins.hpp"
 #include "JlinkDebugProbe.hpp"
 #include "JlinkTraceProbe.hpp"
+#include "EspUsbJtagDebugProbe.hpp"
 #include "Plot.hpp"
 #include "PlotGroupHandler.hpp"
 #include "Popup.hpp"
@@ -60,6 +61,7 @@ class Gui
 
 	std::shared_ptr<IDebugProbe> stlinkProbe;
 	std::shared_ptr<IDebugProbe> jlinkProbe;
+	std::shared_ptr<IDebugProbe> espUsbJtagProbe;
 	std::shared_ptr<IDebugProbe> debugProbeDevice;
 	std::vector<std::string> devicesList{};
 	const std::string noDevices = "No debug probes found!";

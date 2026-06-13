@@ -70,7 +70,7 @@ void Gui::drawDebugProbes()
 	GuiHelper::drawTextAlignedToSize("Debug probe:", alignment);
 	ImGui::SameLine();
 
-	const char* debugProbes[] = {"STLINK", "JLINK"};
+	const char* debugProbes[] = {"STLINK", "JLINK", "ESP_USB_JTAG"};
 	IDebugProbe::DebugProbeSettings probeSettings = viewerDataHandler->getProbeSettings();
 	int32_t debugProbe = probeSettings.debugProbe;
 
@@ -83,6 +83,13 @@ void Gui::drawDebugProbes()
 		{
 			debugProbeDevice = jlinkProbe;
 			shouldListDevices = true;
+		}
+		else if (probeSettings.debugProbe == 2)
+		{
+			debugProbeDevice = espUsbJtagProbe;
+			shouldListDevices = true;
+			if (probeSettings.device.empty())
+				probeSettings.device = "esp32c6";
 		}
 		else
 		{
@@ -113,13 +120,37 @@ void Gui::drawDebugProbes()
 		shouldListDevices = false;
 	}
 
-	GuiHelper::drawTextAlignedToSize("SWD speed [kHz]:", alignment);
+	GuiHelper::drawTextAlignedToSize(probeSettings.debugProbe == 2 ? "JTAG speed [kHz]:" : "SWD speed [kHz]:", alignment);
 	ImGui::SameLine();
 
 	if (ImGui::InputScalar("##speed", ImGuiDataType_U32, &probeSettings.speedkHz, NULL, NULL, "%u"))
 		modified = true;
 
-	if (probeSettings.debugProbe == 1)
+	if (probeSettings.debugProbe == 2)
+	{
+		GuiHelper::drawTextAlignedToSize("Chip target:", alignment);
+		ImGui::SameLine();
+
+		const char* chipTargets[] = {"esp32c6", "esp32c3", "esp32h2", "esp32p4"};
+		int chipIdx = 0;
+		for (int i = 0; i < IM_ARRAYSIZE(chipTargets); ++i)
+		{
+			if (probeSettings.device == chipTargets[i])
+			{
+				chipIdx = i;
+				break;
+			}
+		}
+
+		if (ImGui::Combo("##chip", &chipIdx, chipTargets, IM_ARRAYSIZE(chipTargets)))
+		{
+			probeSettings.device = chipTargets[chipIdx];
+			modified = true;
+		}
+
+		probeSettings.mode = IDebugProbe::Mode::NORMAL;
+	}
+	else if (probeSettings.debugProbe == 1)
 	{
 		GuiHelper::drawTextAlignedToSize("Target name:", alignment);
 		ImGui::SameLine();

@@ -98,6 +98,7 @@ void Gui::mainThread(std::string externalPath)
 
 	jlinkProbe = std::make_shared<JlinkDebugProbe>(logger);
 	stlinkProbe = std::make_shared<StlinkDebugProbe>(logger);
+	espUsbJtagProbe = std::make_shared<EspUsbJtagDebugProbe>(logger);
 	debugProbeDevice = stlinkProbe;
 	viewerDataHandler->setDebugProbe(debugProbeDevice);
 
@@ -461,6 +462,8 @@ bool Gui::openProject(std::string externalPath)
 		devicesList.clear();
 		if (viewerDataHandler->getProbeSettings().debugProbe == 1)
 			debugProbeDevice = jlinkProbe;
+		else if (viewerDataHandler->getProbeSettings().debugProbe == 2)
+			debugProbeDevice = espUsbJtagProbe;
 		else
 			debugProbeDevice = stlinkProbe;
 
