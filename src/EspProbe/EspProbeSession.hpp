@@ -1,0 +1,38 @@
+#ifndef ESP_PROBE_SESSION_HPP
+#define ESP_PROBE_SESSION_HPP
+
+#include <memory>
+#include <string>
+
+#include "esp_riscv_regs.hpp"
+#include "jtag/EspJtagTap.hpp"
+#include "riscv/EspRiscvDm.hpp"
+#include "usb/EspUsbJtagTransport.hpp"
+
+namespace esp_probe
+{
+
+class EspProbeSession
+{
+   public:
+	bool connect(const std::string& serial, const std::string& chip_name, uint32_t speed_khz);
+	void disconnect();
+	bool isConnected() const { return connected_; }
+
+	bool readMemory(uint32_t address, uint8_t* buf, uint32_t size);
+	bool writeMemory(uint32_t address, const uint8_t* buf, uint32_t size);
+
+	const std::string& lastError() const { return last_error_; }
+
+   private:
+	std::unique_ptr<EspUsbJtagTransport> transport_;
+	std::unique_ptr<EspJtagTap> tap_;
+	std::unique_ptr<EspRiscvDm> dm_;
+	const EspChipProfile* profile_ = nullptr;
+	bool connected_ = false;
+	std::string last_error_;
+};
+
+}  // namespace esp_probe
+
+#endif
