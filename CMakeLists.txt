@@ -75,7 +75,18 @@ if(UNIX)
     set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
     include(${CMAKE_MODULE_PATH}/Findlibusb.cmake)
     find_package(libusb REQUIRED)
-    find_package(glfw3 REQUIRED)
+    find_package(glfw3 QUIET)
+    if(NOT glfw3_FOUND)
+        FetchContent_Declare(
+            glfw
+            GIT_REPOSITORY https://github.com/glfw/glfw.git
+            GIT_TAG 3.4)
+        set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+        set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+        set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+        set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(glfw)
+    endif()
     set(STLINK_LINUX ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stlink/lib/linux/libstlink.a)
     set(JLINK_LINUX ${CMAKE_CURRENT_SOURCE_DIR}/third_party/jlink/lib/linux/libjlinkarm.so.8)
     set(INSTALL_PATH /usr/local/MCUViewer)
@@ -121,6 +132,11 @@ set(PROJECT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Gui/GuiHelper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader/StlinkDebugProbe.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader/JlinkDebugProbe.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader/EspUsbJtagDebugProbe.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/usb/EspUsbJtagTransport.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/jtag/EspJtagTap.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/riscv/EspRiscvDm.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/EspProbeSession.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Plot/Plot.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Variable/Variable.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MovingAverage/MovingAverage.cpp
@@ -158,6 +174,16 @@ set_source_files_properties(
     COMPILE_FLAGS "-w"
 )
 
+if(UNIX AND NOT APPLE)
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(GTK3 gtk+-3.0)
+    endif()
+    if(NOT GTK3_FOUND)
+        set(NFD_PORTAL ON CACHE BOOL "Use xdg-desktop-portal for file dialogs" FORCE)
+    endif()
+endif()
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/nfd/)
 
 set(EXECUTABLE ${CMAKE_PROJECT_NAME})
@@ -189,6 +215,10 @@ target_compile_definitions(${EXECUTABLE}
 target_include_directories(${EXECUTABLE} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Gui
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MemoryReader
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/usb
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/jtag
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/riscv
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Plot
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ScrollingBuffer
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MovingAverage
