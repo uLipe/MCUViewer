@@ -1,6 +1,6 @@
 # ESP USB-JTAG (Variable Viewer)
 
-MCUViewer can sample global variables on Espressif RISC-V chips (ESP32-C3/C6/H2/P4) through the built-in USB-JTAG debug interface (`303a:1001`). No OpenOCD or external probe is required for Variable Viewer.
+MCUViewer can sample global variables on Espressif chips with built-in USB-JTAG (`303a:1001`): RISC-V (ESP32-C3/C6/H2/P4) and Xtensa ESP32-S3. No OpenOCD or external probe is required for Variable Viewer.
 
 Trace Viewer (SWO) is not supported on ESP32 — use ST-Link/J-Link targets for SWO.
 
@@ -12,17 +12,18 @@ Trace Viewer (SWO) is not supported on ESP32 — use ST-Link/J-Link targets for 
 | esp32c3  | `0x00005c25` | 1  |                    |
 | esp32h2  | `0x0000c825` | 1  |                    |
 | esp32p4  | `0x00012c25` | 2  | HP core on TAP 1   |
+| esp32s3  | `0x120034e5` | 2  | Xtensa dual-core, CPU0 TAP 0 |
 
-Xtensa chips (ESP32, ESP32-S2/S3) are not implemented yet.
+RISC-V targets read RAM while the CPU runs (System Bus Access). **esp32s3** uses Xtensa `LDDR32.P` and briefly halts the core once per sample batch, then resumes — expect lower max sampling rate than C6 on the same variables.
 
 ## Requirements
 
 ### Linux
 
 - `libusb-1.0-0-dev`
-- `riscv32-esp-elf-gdb` (or compatible GDB 12.1+) for ELF parsing only
+- `riscv32-esp-elf-gdb` or `xtensa-esp32s3-elf-gdb` (GDB 12.1+) for ELF parsing only — match your chip
 - User in the `plugdev` group (or udev rules for `303a:1001`)
-- Firmware running on the target (MCUViewer reads RAM while the CPU runs)
+- Firmware running on the target (RISC-V: non-intrusive RAM read; S3: brief halt per batch)
 
 ### Host conflicts
 
@@ -42,7 +43,7 @@ After stopping acquisition, MCUViewer resumes the core and clears the debug modu
    - Chip target: match your SoC (e.g. `esp32c6`)
    - JTAG speed: `24000` kHz (default)
    - ELF: path to your `build/<project>.elf`
-   - GDB: `riscv32-esp-elf-gdb`
+   - GDB: `riscv32-esp-elf-gdb` (RISC-V) or `xtensa-esp32s3-elf-gdb` (S3)
 3. Import variables by symbol name and **Update variable addresses**.
 4. Drag variables to a plot and press **START**.
 
@@ -93,7 +94,8 @@ EspUsbJtagDebugProbe (IDebugProbe)
   └── EspProbeSession
         ├── EspUsbJtagTransport   USB bulk protocol (OpenOCD esp_usb_jtag.c)
         ├── EspJtagTap            IR/DR scans
-        └── EspRiscvDm            DMI + System Bus Access (memory read/write)
+        └── EspRiscvDm            DMI + System Bus Access (RISC-V memory)
+        └── EspXtensaDm           NAR + LDDR32.P (Xtensa memory, halt/resume per batch)
 ```
 
 Protocol and TAP sequencing are adapted from [openocd-esp32](https://github.com/espressif/openocd-esp32); MCUViewer does not shell out to OpenOCD.
@@ -128,7 +130,7 @@ Arguments: `chip`, `speed_khz`, `rounds`, then one or more hex addresses (32-bit
 | Symptom | Likely cause | Fix |
 |---------|----------------|-----|
 | `libusb_claim_interface failed` | Monitor/OpenOCD holding USB | Close other tools |
-| `RISC-V debug module init failed` | Wrong chip profile or USB busy | Match chip target; replug USB |
+| `RISC-V debug module init failed` / `Xtensa debug module init failed` | Wrong chip profile or USB busy | Match chip target; replug USB |
 | Bootloader OK, no app logs after MCUViewer | Core left halted (old builds) | Replug USB or `openocd … -c "init; reset run; shutdown"` |
 | `/dev/ttyACM0` missing | Kernel driver detached from CDC | Replug USB; use current build with graceful shutdown |
 | Variables `NOT FOUND` | Wrong ELF or non-global vars | Rebuild debug ELF; globals only |

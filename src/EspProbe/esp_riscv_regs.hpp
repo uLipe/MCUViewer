@@ -69,6 +69,7 @@ inline const EspChipProfile* find_chip_profile(const char* name)
 		{"esp32p4", 0x00012c25, 2, 5, 1, true},
 		{"esp32c3", 0x00005c25, 1, 5, 0, true},
 		{"esp32h2", 0x0000c825, 1, 5, 0, true},
+		{"esp32s3", 0x120034e5, 2, 5, 0, false},
 	};
 	for (const auto& p : profiles)
 	{

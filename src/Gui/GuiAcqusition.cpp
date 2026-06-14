@@ -131,7 +131,7 @@ void Gui::drawDebugProbes()
 		GuiHelper::drawTextAlignedToSize("Chip target:", alignment);
 		ImGui::SameLine();
 
-		const char* chipTargets[] = {"esp32c6", "esp32c3", "esp32h2", "esp32p4"};
+		const char* chipTargets[] = {"esp32c6", "esp32c3", "esp32h2", "esp32p4", "esp32s3"};
 		int chipIdx = 0;
 		for (int i = 0; i < IM_ARRAYSIZE(chipTargets); ++i)
 		{

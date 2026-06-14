@@ -136,6 +136,7 @@ set(PROJECT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/usb/EspUsbJtagTransport.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/jtag/EspJtagTap.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/riscv/EspRiscvDm.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/xtensa/EspXtensaDm.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/EspProbeSession.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Plot/Plot.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Variable/Variable.cpp
@@ -219,6 +220,7 @@ target_include_directories(${EXECUTABLE} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/usb
     ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/jtag
     ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/riscv
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EspProbe/xtensa
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Plot
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ScrollingBuffer
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MovingAverage

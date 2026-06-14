@@ -11,6 +11,7 @@
 #include "jtag/EspJtagTap.hpp"
 #include "riscv/EspRiscvDm.hpp"
 #include "usb/EspUsbJtagTransport.hpp"
+#include "xtensa/EspXtensaDm.hpp"
 
 namespace esp_probe
 {
@@ -32,7 +33,8 @@ class EspProbeSession
    private:
 	std::unique_ptr<EspUsbJtagTransport> transport_;
 	std::unique_ptr<EspJtagTap> tap_;
-	std::unique_ptr<EspRiscvDm> dm_;
+	std::unique_ptr<EspRiscvDm> riscv_dm_;
+	std::unique_ptr<EspXtensaDm> xtensa_dm_;
 	const EspChipProfile* profile_ = nullptr;
 	bool connected_ = false;
 	std::string last_error_;
