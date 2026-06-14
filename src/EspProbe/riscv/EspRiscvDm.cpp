@@ -262,7 +262,7 @@ void EspRiscvDm::shutdown()
 
 uint32_t EspRiscvDm::dmiScan(uint32_t op, uint32_t address, uint32_t data_out, uint32_t* data_in)
 {
-	if (!batch_active_ && !selectDbusIr())
+	if (!selectDbusIr())
 		return kDmiStatusFailed;
 
 	const unsigned dr_bits = dmiDrBits();
