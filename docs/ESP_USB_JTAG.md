@@ -98,6 +98,31 @@ EspUsbJtagDebugProbe (IDebugProbe)
 
 Protocol and TAP sequencing are adapted from [openocd-esp32](https://github.com/espressif/openocd-esp32); MCUViewer does not shell out to OpenOCD.
 
+## Batch sampling (ESP_USB_JTAG)
+
+Variable Viewer calls `readMemoryBatch` when the probe supports it. On ESP, one sample tick uses a **single JTAG IR select** and **one SBA setup**, then reads every variable word in sequence. Addresses that share the same 32-bit aligned word are read once (useful for multi-axis structs in contiguous RAM).
+
+ST-Link and J-Link keep the legacy per-variable loop unless a probe overrides batch read.
+
+### Batch benchmark (optional)
+
+Compare single vs batch read latency with your ELF symbol addresses:
+
+```bash
+g++ -std=c++20 -O0 \
+  -Isrc/EspProbe -Isrc/EspProbe/usb -Isrc/EspProbe/jtag -Isrc/EspProbe/riscv \
+  tools/esp_probe_batch_bench.cpp \
+  src/EspProbe/usb/EspUsbJtagTransport.cpp \
+  src/EspProbe/jtag/EspJtagTap.cpp \
+  src/EspProbe/riscv/EspRiscvDm.cpp \
+  src/EspProbe/EspProbeSession.cpp \
+  -lusb-1.0 -o /tmp/esp_probe_batch_bench
+
+/tmp/esp_probe_batch_bench esp32c6 24000 500 0x4080xxxx 0x4080yyyy 0x4080zzzz
+```
+
+Arguments: `chip`, `speed_khz`, `rounds`, then one or more hex addresses (32-bit reads). Expect higher `speedup` as variable count grows.
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
