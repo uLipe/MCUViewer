@@ -57,6 +57,24 @@ void EspProbeSession::disconnect()
 	connected_ = false;
 }
 
+bool EspProbeSession::readMemoryBatch(const std::vector<std::pair<uint32_t, uint8_t>>& entries,
+	std::unordered_map<uint32_t, uint32_t>& values)
+{
+	if (!connected_ || !dm_)
+	{
+		last_error_ = "Not connected";
+		return false;
+	}
+	if (!dm_->readMemoryBatch(entries, values))
+	{
+		last_error_ = dm_->lastError();
+		if (last_error_.empty())
+			last_error_ = "Memory batch read failed";
+		return false;
+	}
+	return true;
+}
+
 bool EspProbeSession::readMemory(uint32_t address, uint8_t* buf, uint32_t size)
 {
 	if (!connected_ || !dm_)

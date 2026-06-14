@@ -3,6 +3,9 @@
 
 #include <cstdint>
 #include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace esp_probe
 {
@@ -17,11 +20,16 @@ class EspRiscvDm
 
 	bool init();
 	void shutdown();
+	using MemoryEntry = std::pair<uint32_t, uint8_t>;
+
 	bool readMemory(uint32_t address, uint8_t* buf, uint32_t size);
+	bool readMemoryBatch(const std::vector<MemoryEntry>& entries, std::unordered_map<uint32_t, uint32_t>& values);
 	bool writeMemory(uint32_t address, const uint8_t* buf, uint32_t size);
 	const std::string& lastError() const { return last_error_; }
 
    private:
+	bool beginDmiBatch();
+	void endDmiBatch();
 	bool selectDbusIr();
 	bool selectDtmControlIr();
 	unsigned bypassDrBits() const;
@@ -38,6 +46,8 @@ class EspRiscvDm
 	const EspChipProfile& profile_;
 	unsigned abits_ = 7;
 	unsigned dmi_busy_delay_ = 0;
+	bool batch_active_ = false;
+	bool sb_sba_v1_ = false;
 	std::string last_error_;
 };
 

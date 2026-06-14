@@ -3,6 +3,9 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "esp_riscv_regs.hpp"
 #include "jtag/EspJtagTap.hpp"
@@ -20,6 +23,8 @@ class EspProbeSession
 	bool isConnected() const { return connected_; }
 
 	bool readMemory(uint32_t address, uint8_t* buf, uint32_t size);
+	bool readMemoryBatch(const std::vector<std::pair<uint32_t, uint8_t>>& entries,
+		std::unordered_map<uint32_t, uint32_t>& values);
 	bool writeMemory(uint32_t address, const uint8_t* buf, uint32_t size);
 
 	const std::string& lastError() const { return last_error_; }

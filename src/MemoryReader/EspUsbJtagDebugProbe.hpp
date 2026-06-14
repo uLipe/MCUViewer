@@ -23,6 +23,10 @@ class EspUsbJtagDebugProbe : public IDebugProbe
 	bool readMemory(uint32_t address, uint8_t* buf, uint32_t size) override;
 	bool writeMemory(uint32_t address, uint8_t* buf, uint32_t size) override;
 
+	bool supportsBatchRead() const override { return true; }
+	bool readMemoryBatch(const std::vector<std::pair<uint32_t, uint8_t>>& entries,
+		std::unordered_map<uint32_t, uint32_t>& values) override;
+
 	std::string getLastErrorMsg() const override;
 	std::vector<std::string> getConnectedDevices() override;
 

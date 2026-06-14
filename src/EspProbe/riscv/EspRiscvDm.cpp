@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace esp_probe
@@ -53,9 +54,30 @@ bool readIdcode(EspJtagTap& tap, const EspChipProfile& profile, uint32_t* idcode
 	return true;
 }
 
+uint32_t packRawValue(uint32_t address, uint8_t size, uint32_t word)
+{
+	const uint8_t shift = static_cast<uint8_t>((address & 3u) * 8u);
+	if (size == 1)
+		return (word >> shift) & 0xffu;
+	if (size == 2)
+		return (word >> shift) & 0xffffu;
+	return word;
+}
+
 }  // namespace
 
 EspRiscvDm::EspRiscvDm(EspJtagTap& tap, const EspChipProfile& profile) : tap_(tap), profile_(profile) {}
+
+bool EspRiscvDm::beginDmiBatch()
+{
+	batch_active_ = selectDbusIr();
+	return batch_active_;
+}
+
+void EspRiscvDm::endDmiBatch()
+{
+	batch_active_ = false;
+}
 
 bool EspRiscvDm::selectDbusIr()
 {
@@ -222,6 +244,8 @@ bool EspRiscvDm::init()
 	}
 	log_step("sbcs", sbcs, 0);
 
+	sb_sba_v1_ = (get_field_u32(sbcs, kDmSbCsSbVersion) >> 29) == kDmSbCsSbVersion10;
+
 	return true;
 }
 
@@ -238,7 +262,7 @@ void EspRiscvDm::shutdown()
 
 uint32_t EspRiscvDm::dmiScan(uint32_t op, uint32_t address, uint32_t data_out, uint32_t* data_in)
 {
-	if (!selectDbusIr())
+	if (!batch_active_ && !selectDbusIr())
 		return kDmiStatusFailed;
 
 	const unsigned dr_bits = dmiDrBits();
@@ -308,12 +332,7 @@ bool EspRiscvDm::dmiWrite(uint32_t address, uint32_t value)
 
 bool EspRiscvDm::readMemory32(uint32_t address, uint32_t* value)
 {
-	uint32_t sbcs = 0;
-	if (!dmiRead(kDmSbCs, &sbcs))
-		return false;
-
-	const uint32_t sbversion = get_field_u32(sbcs, kDmSbCsSbVersion) >> 29;
-	if (sbversion == kDmSbCsSbVersion10)
+	if (sb_sba_v1_)
 	{
 		uint32_t sbcs_write = set_field_u32(0, kDmSbCsSbReadOnAddr, 1u);
 		sbcs_write = set_field_u32(sbcs_write, kDmSbCsSbAccess, 2u);
@@ -327,14 +346,76 @@ bool EspRiscvDm::readMemory32(uint32_t address, uint32_t* value)
 		if (!dmiWrite(kDmSbAddress0, address))
 			return false;
 
-		sbcs = set_field_u32(sbcs, kDmSbCsSbAccess, 2u);
+		uint32_t sbcs = set_field_u32(0, kDmSbCsSbAccess, 2u);
 		sbcs = set_field_u32(sbcs, kDmSbCsSbSingleRead, 1u);
 		if (!dmiWrite(kDmSbCs, sbcs))
 			return false;
 	}
 
-	if (!dmiRead(kDmSbData0, value))
+	return dmiRead(kDmSbData0, value);
+}
+
+bool EspRiscvDm::readMemoryBatch(const std::vector<MemoryEntry>& entries, std::unordered_map<uint32_t, uint32_t>& values)
+{
+	values.clear();
+	if (entries.empty())
+		return true;
+
+	if (!beginDmiBatch())
+	{
+		last_error_ = "DMI batch start failed";
 		return false;
+	}
+
+	bool ok = false;
+	std::unordered_map<uint32_t, uint32_t> words;
+
+	if (sb_sba_v1_)
+	{
+		uint32_t sbcs_write = set_field_u32(0, kDmSbCsSbReadOnAddr, 1u);
+		sbcs_write = set_field_u32(sbcs_write, kDmSbCsSbAccess, 2u);
+		if (!dmiWrite(kDmSbCs, sbcs_write))
+			goto done;
+	}
+
+	for (const auto& [address, size] : entries)
+	{
+		(void)size;
+		const uint32_t aligned = address & ~3u;
+		if (words.contains(aligned))
+			continue;
+
+		if (!sb_sba_v1_)
+		{
+			if (!dmiWrite(kDmSbAddress0, aligned))
+				goto done;
+			uint32_t sbcs = set_field_u32(0, kDmSbCsSbAccess, 2u);
+			sbcs = set_field_u32(sbcs, kDmSbCsSbSingleRead, 1u);
+			if (!dmiWrite(kDmSbCs, sbcs))
+				goto done;
+		}
+		else if (!dmiWrite(kDmSbAddress0, aligned))
+		{
+			goto done;
+		}
+
+		uint32_t word = 0;
+		if (!dmiRead(kDmSbData0, &word))
+			goto done;
+		words[aligned] = word;
+	}
+
+	ok = true;
+done:
+	endDmiBatch();
+	if (!ok)
+	{
+		last_error_ = "Memory batch read failed";
+		return false;
+	}
+
+	for (const auto& [address, size] : entries)
+		values[address] = packRawValue(address, size, words[address & ~3u]);
 	return true;
 }
 

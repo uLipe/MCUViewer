@@ -46,6 +46,20 @@ class IDebugProbe
 	virtual bool readMemory(uint32_t address, uint8_t* buf, uint32_t size) = 0;
 	virtual bool writeMemory(uint32_t address, uint8_t* buf, uint32_t size) = 0;
 
+	virtual bool supportsBatchRead() const { return false; }
+	virtual bool readMemoryBatch(const std::vector<std::pair<uint32_t, uint8_t>>& entries,
+		std::unordered_map<uint32_t, uint32_t>& values)
+	{
+		for (const auto& [address, size] : entries)
+		{
+			uint32_t raw = 0;
+			if (!readMemory(address, reinterpret_cast<uint8_t*>(&raw), size))
+				return false;
+			values[address] = raw;
+		}
+		return true;
+	}
+
 	virtual std::string getLastErrorMsg() const = 0;
 
 	virtual std::vector<std::string> getConnectedDevices() = 0;

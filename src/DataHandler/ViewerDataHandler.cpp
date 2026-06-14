@@ -121,15 +121,32 @@ void ViewerDataHandler::dataHandler()
 			{
 				std::unordered_map<uint32_t, double> rawValues;
 
-				/* sample by address */
-				for (auto& [address, size] : sampleList)
+				if (debugProbe->supportsBatchRead())
 				{
-					uint32_t value = 0;
-					if (debugProbe->readMemory(address, (uint8_t*)&value, size))
-						rawValues[address] = value;
-					else
+					std::unordered_map<uint32_t, uint32_t> batch;
+					if (!debugProbe->readMemoryBatch(sampleList, batch))
 						setState(State::STOP);
+					else
+					{
+						for (const auto& [address, raw] : batch)
+							rawValues[address] = raw;
+					}
 				}
+				else
+				{
+					for (auto& [address, size] : sampleList)
+					{
+						uint32_t value = 0;
+						if (debugProbe->readMemory(address, (uint8_t*)&value, size))
+							rawValues[address] = value;
+						else
+							setState(State::STOP);
+					}
+				}
+
+				if (viewerState != State::RUN)
+					continue;
+
 				double timestamp = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - start).count();
 				updateVariables(timestamp, rawValues);
 
