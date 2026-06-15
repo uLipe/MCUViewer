@@ -28,8 +28,6 @@ class EspRiscvDm
 	const std::string& lastError() const { return last_error_; }
 
    private:
-	bool beginDmiBatch();
-	void endDmiBatch();
 	bool selectDbusIr();
 	bool selectDtmControlIr();
 	unsigned bypassDrBits() const;
@@ -46,7 +44,6 @@ class EspRiscvDm
 	const EspChipProfile& profile_;
 	unsigned abits_ = 7;
 	unsigned dmi_busy_delay_ = 0;
-	bool batch_active_ = false;
 	bool sb_sba_v1_ = false;
 	std::string last_error_;
 };

@@ -68,17 +68,6 @@ uint32_t packRawValue(uint32_t address, uint8_t size, uint32_t word)
 
 EspRiscvDm::EspRiscvDm(EspJtagTap& tap, const EspChipProfile& profile) : tap_(tap), profile_(profile) {}
 
-bool EspRiscvDm::beginDmiBatch()
-{
-	batch_active_ = selectDbusIr();
-	return batch_active_;
-}
-
-void EspRiscvDm::endDmiBatch()
-{
-	batch_active_ = false;
-}
-
 bool EspRiscvDm::selectDbusIr()
 {
 	std::vector<uint8_t> ir;
@@ -361,23 +350,7 @@ bool EspRiscvDm::readMemoryBatch(const std::vector<MemoryEntry>& entries, std::u
 	if (entries.empty())
 		return true;
 
-	if (!beginDmiBatch())
-	{
-		last_error_ = "DMI batch start failed";
-		return false;
-	}
-
-	bool ok = false;
 	std::unordered_map<uint32_t, uint32_t> words;
-
-	if (sb_sba_v1_)
-	{
-		uint32_t sbcs_write = set_field_u32(0, kDmSbCsSbReadOnAddr, 1u);
-		sbcs_write = set_field_u32(sbcs_write, kDmSbCsSbAccess, 2u);
-		if (!dmiWrite(kDmSbCs, sbcs_write))
-			goto done;
-	}
-
 	for (const auto& [address, size] : entries)
 	{
 		(void)size;
@@ -385,33 +358,13 @@ bool EspRiscvDm::readMemoryBatch(const std::vector<MemoryEntry>& entries, std::u
 		if (words.contains(aligned))
 			continue;
 
-		if (!sb_sba_v1_)
-		{
-			if (!dmiWrite(kDmSbAddress0, aligned))
-				goto done;
-			uint32_t sbcs = set_field_u32(0, kDmSbCsSbAccess, 2u);
-			sbcs = set_field_u32(sbcs, kDmSbCsSbSingleRead, 1u);
-			if (!dmiWrite(kDmSbCs, sbcs))
-				goto done;
-		}
-		else if (!dmiWrite(kDmSbAddress0, aligned))
-		{
-			goto done;
-		}
-
 		uint32_t word = 0;
-		if (!dmiRead(kDmSbData0, &word))
-			goto done;
+		if (!readMemory32(aligned, &word))
+		{
+			last_error_ = "Memory batch read failed";
+			return false;
+		}
 		words[aligned] = word;
-	}
-
-	ok = true;
-done:
-	endDmiBatch();
-	if (!ok)
-	{
-		last_error_ = "Memory batch read failed";
-		return false;
 	}
 
 	for (const auto& [address, size] : entries)
