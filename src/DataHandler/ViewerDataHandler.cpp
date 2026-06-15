@@ -119,6 +119,8 @@ void ViewerDataHandler::dataHandler()
 
 			else if (period > ((1.0 / settings.sampleFrequencyHz) * timer))
 			{
+				createSampleList();
+
 				std::unordered_map<uint32_t, double> rawValues;
 
 				if (debugProbe->supportsBatchRead())
